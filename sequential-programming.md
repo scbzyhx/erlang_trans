@@ -241,3 +241,48 @@ convert 函数的两部分被称之为函数的两个子句。正如你所看到
                           {shell,eval_exprs,7,[{file,"shell.erl"},{line,621}]},
                           {shell,eval_loop,3,[{file,"shell.erl"},{line,606}]}]}}
 ```  
+
+## 元组  
+
+前面的 tut2 的程序不是一好的编程风格。例如：  
+
+```
+tut2.convert(3,inch)  
+```  
+
+这是意味着 3 本身已经是英寸表示了呢？还是指将 3 厘米转换成英寸呢？ Erlang 提供了将事件成组并用更易理解的方式表示的机制。它就是元组。一个元组由花括号括起来的。  
+
+所以，{inch,3} 指的就是 3 英寸，而 {centimeter, 5} 指的就是 5 厘米。接下来，我们将重写厘米与英寸之间的转换程序。将下面的代码输入到文件 tut3.erl 文件中：  
+
+```
+-module(tut3).
+-export([convert_length/1]).
+
+convert_length({centimeter, X}) ->
+    {inch, X / 2.54};
+convert_length({inch, Y}) ->
+    {centimeter, Y * 2.54}.
+```  
+
+编译并测试：  
+
+```
+14> c(tut3).
+{ok,tut3}
+15> tut3:convert_length({inch, 5}).
+{centimeter,12.7}
+16> tut3:convert_length(tut3:convert_length({inch, 5})).
+{inch,5.0}
+```  
+
+请注意，第 16 行代码将 5 英寸转换成厘米后，再转换为就英寸，所以它得到原来的值。这也表明，一个函数实参可以是另一个函数的返回结果。仔细看一下，第 16 行的代码是怎么工作的。将 {inch,5} 参数传递给函数后，convert\_length 函数的首语句的头首先被匹配，也就是 convert_length({inch,5})  被匹配。也可以看作，{centimeter, X} 没有与 {inch,5} 匹配成功 ("->" 前面的内容即被称之为头部)。第一个匹配失败后，程序会尝试第二个语句，即 convert\_length({inch,5})。 第二个语句匹配成功，所以 Y 值也就为 5。
+
+元组中可以有更多的元素，而不仅仅是上面描述的两部分。事实上，你可以在元组中，使用任意多的部分，只要每个部分都是合法的 Erlang 的项。例如，表示世界上不同城市的温度值：  
+
+```
+{moscow, {c, -10}}
+{cape_town, {f, 70}}
+{paris, {f, 28}}
+```  
+
+这些元组中每个都有固定数目的项。元组中的每个项都被称之为一个元素。在元组  {moscow,{c,-10}} 中，第一个元素为 moscow 而第二个元素为 {c,-10}。其中，c 表示摄氏度，f 表示华氏度。
