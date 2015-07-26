@@ -725,3 +725,339 @@ reverse([], Reversed_List) ->
     Reversed_List.
 ```  
 
+```
+52> c(tut8).
+{ok,tut8}
+53> tut8:reverse([1,2,3]).
+[3,2,1]
+```  
+
+思考一下，Reversed\_List 是如何被创建的。初始时，其为 []。随后，待翻转的列表的首元素被取出来再添加到 Reversed\_List 列表中,如下所示：  
+
+```
+reverse([1|2,3], []) =>
+    reverse([2,3], [1|[]])
+
+reverse([2|3], [1]) =>
+    reverse([3], [2|[1])
+
+reverse([3|[]], [2,1]) =>
+    reverse([], [3|[2,1]])
+
+reverse([], [3,2,1]) =>
+    [3,2,1]
+```  
+
+lists 模块中包括许多操作列表的函数，例如，列表翻转。所以，在自己动手写操作列表的函数之前是可以先检查是否在模块中已经有了 (参考 STDLIB 中 [lists(3)](http://www.erlang.org/doc/man/lists.html) 手册)。  
+
+下面让我们回到城市与温度的话题上，但是这一次我们会使用更加结构化的方法。首先，我们将整个列表中的温度都使用摄氏度表示：  
+
+```
+-module(tut7).
+-export([format_temps/1]).
+
+format_temps(List_of_cities) ->
+    convert_list_to_c(List_of_cities).
+
+convert_list_to_c([{Name, {f, F}} | Rest]) ->
+    Converted_City = {Name, {c, (F -32)* 5 / 9}},
+    [Converted_City | convert_list_to_c(Rest)];
+
+convert_list_to_c([City | Rest]) ->
+    [City | convert_list_to_c(Rest)];
+
+convert_list_to_c([]) ->
+```  
+
+测试一下上面的函数：  
+
+```
+54> c(tut7).
+{ok, tut7}.
+55> tut7:format_temps([{moscow, {c, -10}}, {cape_town, {f, 70}},
+{stockholm, {c, -4}}, {paris, {f, 28}}, {london, {f, 36}}]).
+[{moscow,{c,-10}},
+ {cape_town,{c,21.11111111111111}},
+ {stockholm,{c,-4}},
+ {paris,{c,-2.2222222222222223}},
+ {london,{c,2.2222222222222223}}]
+``` 
+
+含义如下：  
+
+```
+format_temps(List_of_cities) ->
+    convert_list_to_c(List_of_cities).
+```  
+
+format_temps/1 调用 convert\_list\_to\_c/1。covert\_list\_to\_c/1 移除 List\_of\_cities 的首元素，并将其转换为摄氏单位表示 (如果需要)。| 操作符用来将被转换后的元素转换后的剩余列表中：  
+
+```
+[Converted_City | convert_list_to_c(Rest)];
+```  
+
+或者：  
+
+```
+[City | convert_list_to_c(Rest)];
+```  
+
+这个过程一直重复到列表结束。当列表为空时，则执行：  
+
+```
+convert_list_to_c([]) ->
+    [].
+```  
+
+当列表被转换后，用新增的输出函数将其输出：  
+
+```
+-module(tut7).
+-export([format_temps/1]).
+
+format_temps(List_of_cities) ->
+    Converted_List = convert_list_to_c(List_of_cities),
+    print_temp(Converted_List).
+
+convert_list_to_c([{Name, {f, F}} | Rest]) ->
+    Converted_City = {Name, {c, (F -32)* 5 / 9}},
+    [Converted_City | convert_list_to_c(Rest)];
+
+convert_list_to_c([City | Rest]) ->
+    [City | convert_list_to_c(Rest)];
+
+convert_list_to_c([]) ->
+    [].
+
+print_temp([{Name, {c, Temp}} | Rest]) ->
+    io:format("~-15w ~w c~n", [Name, Temp]),
+    print_temp(Rest);
+print_temp([]) ->
+    ok.
+```  
+
+```
+56> c(tut7).
+{ok,tut7}
+57> tut7:format_temps([{moscow, {c, -10}}, {cape_town, {f, 70}},
+{stockholm, {c, -4}}, {paris, {f, 28}}, {london, {f, 36}}]).
+moscow          -10 c
+cape_town       21.11111111111111 c
+stockholm       -4 c
+paris           -2.2222222222222223 c
+london          2.2222222222222223 c
+ok
+
+```  
+
+接下来，添加一个函数用于搜索拥有最高温度与最低温度值的城市。下面的方法并不是最高效的方式，因为它遍历了四次列表。但是首先应当保证程序的清晰性和正确性，然后才是提高程序的效率：  
+
+```
+-module(tut7).
+-export([format_temps/1]).
+
+format_temps(List_of_cities) ->
+    Converted_List = convert_list_to_c(List_of_cities),
+    print_temp(Converted_List),
+    {Max_city, Min_city} = find_max_and_min(Converted_List),
+    print_max_and_min(Max_city, Min_city).
+
+convert_list_to_c([{Name, {f, Temp}} | Rest]) ->
+    Converted_City = {Name, {c, (Temp -32)* 5 / 9}},
+    [Converted_City | convert_list_to_c(Rest)];
+
+convert_list_to_c([City | Rest]) ->
+    [City | convert_list_to_c(Rest)];
+
+convert_list_to_c([]) ->
+    [].
+
+print_temp([{Name, {c, Temp}} | Rest]) ->
+    io:format("~-15w ~w c~n", [Name, Temp]),
+    print_temp(Rest);
+print_temp([]) ->
+    ok.
+
+find_max_and_min([City | Rest]) ->
+    find_max_and_min(Rest, City, City).
+
+find_max_and_min([{Name, {c, Temp}} | Rest], 
+         {Max_Name, {c, Max_Temp}}, 
+         {Min_Name, {c, Min_Temp}}) ->
+    if 
+        Temp > Max_Temp ->
+            Max_City = {Name, {c, Temp}};           % Change
+        true -> 
+            Max_City = {Max_Name, {c, Max_Temp}} % Unchanged
+    end,
+    if
+         Temp < Min_Temp ->
+            Min_City = {Name, {c, Temp}};           % Change
+        true -> 
+            Min_City = {Min_Name, {c, Min_Temp}} % Unchanged
+    end,
+    find_max_and_min(Rest, Max_City, Min_City);
+
+find_max_and_min([], Max_City, Min_City) ->
+    {Max_City, Min_City}.
+
+print_max_and_min({Max_name, {c, Max_temp}}, {Min_name, {c, Min_temp}}) ->
+    io:format("Max temperature was ~w c in ~w~n", [Max_temp, Max_name]),
+    io:format("Min temperature was ~w c in ~w~n", [Min_temp, Min_name]).
+```  
+
+```
+58> c(tut7).
+{ok, tut7}
+59> tut7:format_temps([{moscow, {c, -10}}, {cape_town, {f, 70}},
+{stockholm, {c, -4}}, {paris, {f, 28}}, {london, {f, 36}}]).
+moscow          -10 c
+cape_town       21.11111111111111 c
+stockholm       -4 c
+paris           -2.2222222222222223 c
+london          2.2222222222222223 c
+Max temperature was 21.11111111111111 c in cape_town
+Min temperature was -10 c in moscow
+ok  
+```  
+
+##2.12 If 与 case  
+
+上面的 find\_max\_and\_min 函数可以找到温度的最大值与最小值。这儿介绍一个新的结构 if。If 的工作方式如下：  
+
+```
+if
+    Condition 1 ->
+        Action 1;
+    Condition 2 ->
+        Action 2;
+    Condition 3 ->
+        Action 3;
+    Condition 4 ->
+        Action 4
+end
+```  
+
+注意，在 end 之前没有 “;”。条件 (Condidtion) 的工作方式与 guard 一样，即测试并返回成功或者失败。Erlang 从最上面的条件开始测试一直到找到一个条件真。随后，执行该条件后的动作，且忽略其它在 end 前的条件与动作。如果所有条件都测试失败，则会产生运行时错误。一个测试恒为真的条件就是 true。它常用作 if 的最后一个条件，即当所有条件都测试失败时，则执行 true 后面的动作。  
+
+下面这个例子说明了 if 的工作方式：  
+
+```
+-module(tut9).
+-export([test_if/2]).
+
+test_if(A, B) ->
+    if 
+        A == 5 ->
+            io:format("A == 5~n", []),
+            a_equals_5;
+        B == 6 ->
+            io:format("B == 6~n", []),
+            b_equals_6;
+        A == 2, B == 3 ->                      %That is A equals 2 and B equals 3
+            io:format("A == 2, B == 3~n", []),
+            a_equals_2_b_equals_3;
+        A == 1 ; B == 7 ->                     %That is A equals 1 or B equals 7
+            io:format("A == 1 ; B == 7~n", []),
+            a_equals_1_or_b_equals_7
+    end.
+```  
+
+测试该程序：  
+
+```
+60> c(tut9).
+{ok,tut9}
+61> tut9:test_if(5,33).
+A == 5
+a_equals_5
+62> tut9:test_if(33,6).
+B == 6
+b_equals_6
+63> tut9:test_if(2, 3).
+A == 2, B == 3
+a_equals_2_b_equals_3
+64> tut9:test_if(1, 33).
+A == 1 ; B == 7
+a_equals_1_or_b_equals_7
+65> tut9:test_if(33, 7).
+A == 1 ; B == 7
+a_equals_1_or_b_equals_7
+66> tut9:test_if(33, 33).
+** exception error: no true branch found when evaluating an if expression
+     in function  tut9:test_if/2 (tut9.erl, line 5)
+```
+
+注意，tut9:test_if(33,33) 使得所有测试条件都失败，这将导致产生一个 if_clause 运行时错误。参考 [Guard 序列](http://www.erlang.org/doc/reference_manual/expressions.html) 可以得到更多 guard 测试的内容。  
+
+Erlang 中还有一种 case 结构。回想一下前面的 convert_length 函数：  
+
+```
+convert_length({centimeter, X}) ->
+    {inch, X / 2.54};
+convert_length({inch, Y}) ->
+    {centimeter, Y * 2.54}.
+```  
+
+该函数也可以用 case 实现，如下所示：  
+
+```
+-module(tut10).
+-export([convert_length/1]).
+
+convert_length(Length) ->
+    case Length of
+        {centimeter, X} ->
+            {inch, X / 2.54};
+        {inch, Y} ->
+            {centimeter, Y * 2.54}
+    end.
+```  
+
+无论是 case 还是 if 都有返回值。这也就是说，上面的例子中，case 语句要么返回 {inch,X/2.54} 要么返回 {centimeter,Y*2.54}。case 语句也可以用 guard 子句来实现。下面的例子可以帮助你分清二者。这个例子中，输入年份得到指定某月的天数。年份必须是已知的，因为闰年的二月有 29 天。  
+
+```
+-module(tut11).
+-export([month_length/2]).
+
+month_length(Year, Month) ->
+    %% All years divisible by 400 are leap
+    %% Years divisible by 100 are not leap (except the 400 rule above)
+    %% Years divisible by 4 are leap (except the 100 rule above)
+    Leap = if
+        trunc(Year / 400) * 400 == Year ->
+            leap;
+        trunc(Year / 100) * 100 == Year ->
+            not_leap;
+        trunc(Year / 4) * 4 == Year ->
+            leap;
+        true ->
+            not_leap
+    end,  
+    case Month of
+        sep -> 30;
+        apr -> 30;
+        jun -> 30;
+        nov -> 30;
+        feb when Leap == leap -> 29;
+        feb -> 28;
+        jan -> 31;
+        mar -> 31;
+        may -> 31;
+        jul -> 31;
+        aug -> 31;
+        oct -> 31;
+        dec -> 31
+    end
+```  
+
+```
+70> c(tut11).
+{ok,tut11}
+71> tut11:month_length(2004, feb).
+29
+72> tut11:month_length(2003, feb).
+28
+73> tut11:month_length(1947, aug).
+31
+```  
