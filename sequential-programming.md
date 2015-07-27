@@ -1061,3 +1061,202 @@ month_length(Year, Month) ->
 73> tut11:month_length(1947, aug).
 31
 ```  
+##2.13 内置函数 (BIF)
+
+内置函数是指那些出于某种需求而内置到 Erlang 虚拟中的函数。内置函数常常实现那些在 Erlang 中不容易实现或者在 Erlang 中实现效率不高的函数。某些内置函数也可以只用函数名就调用，因为这些函数是由于默认属于 erlang 模块。例如，下面调用内置函数 trunc 等价于调用 erlang:trunc。  
+
+如下所示，判断一个是否为闰年。如果可以被 400 整除，则为闰年。为了判断，先将年份除以 400，再用 trunc 函数移去小数部分。然后，再将结果乘以 400 判断是否得到最初的值。例如，以 2004 年为例：  
+
+```
+2004 / 400 = 5.01
+trunc(5.01) = 5
+5 * 400 = 2000
+```  
+
+2000 年与 2004 年不同，2004 不能被 400 整除。而对于 2000 来说，  
+
+```
+2000 / 400 = 5.0
+trunc(5.0) = 5
+5 * 400 = 2000
+```  
+
+所以，2000 年为闰年。接下来两个 trunc 测试例子判断年份是否可以补 100 或者 4 整除。 首先第一个 if 语句返回 leap 或者 not_leap，该值丰在变量 Leap 中的。这个变量会被用到后面 feb 的 guard 中，来发现该月份有多少天。  
+
+这个例子演示了 trunc 的使用方法。其实，在 Erlang 中可以使用内置函数 rem 来求得余数，这样会简单很多。示例如下：  
+
+```
+74> 2004 rem 400.
+4
+```  
+
+所以下面的这段代码也可以改写：  
+
+```
+trunc(Year / 400) * 400 == Year ->
+    leap;
+```  
+
+可以被改写成：  
+
+```
+Year rem 400 == 0 ->
+    leap;
+```  
+
+Erlang 中除了 trunc 之外，还有很多的内置函数。其中只有一部分可以用在 guard 中，并且你不可以在 guard 中使用自定义的函数 ( 参考 [guard 序列](http://www.erlang.org/doc/reference_manual/expressions.html) )。(高级话题：这不能保证 guard 没有副作用)。让我们在 shell 中测试一些内置函数：  
+
+```
+75> trunc(5.6).
+5
+76> round(5.6).
+6
+77> length([a,b,c,d]).
+4
+78> float(5).
+5.0
+79> is_atom(hello).
+true
+80> is_atom("hello").
+false
+81> is_tuple({paris, {c, 30}}).
+true
+82> is_tuple([paris, {c, 30}]).
+false
+```  
+
+所有的这些函数都可以用到 guard 中。下现这些函数不可以用在 guard 中：  
+
+```
+83> atom_to_list(hello).
+"hello"
+84> list_to_atom("goodbye").
+goodbye
+85> integer_to_list(22).
+"22"
+```  
+
+这三个内置函数可以完成类型的转换。要想在 Erlang 系统中实现这样的转换几乎是不可能的。  
+
+## 2.14 高阶函数  (Fun)
+
+Erlang 作为函数式编程语言自然拥有高阶函数。在 shell 中，我们可以这样使用：  
+
+```
+86> Xf = fun(X) -> X * 2 end.
+ #Fun<erl_eval.5.123085357>
+87> Xf(5).
+10
+```  
+
+这里定义了一个数值翻倍的函数，并将这个函数赋给了一个变量。所以，Xf(5) 返回值为 10。Erlang 有两个非常有用的操作列表的函数 foreach 与 map, 定义如下：  
+
+```
+foreach(Fun, [First|Rest]) ->
+    Fun(First),
+    foreach(Fun, Rest);
+foreach(Fun, []) ->
+    ok.
+
+map(Fun, [First|Rest]) -> 
+    [Fun(First)|map(Fun,Rest)];
+map(Fun, []) -> 
+    [].
+```  
+
+这两个函数是由标准模块 lists 提供的。foreach 将一个函数作用于列表中的每一个元素。 map 通过将一个函数作用于列表中的每个元素生成一个新的列表。下面，在 shell 中使用 map 的 Add_3 函数生成一个新的列表：  
+
+```
+88> Add_3 = fun(X) -> X + 3 end.
+ #Fun<erl_eval.5.123085357>
+89> lists:map(Add_3, [1,2,3]).
+[4,5,6]
+```  
+
+让我们再次输出一组城市的温度值：  
+
+```
+90> Print_City = fun({City, {X, Temp}}) -> io:format("~-15w ~w ~w~n",
+[City, X, Temp]) end.
+ #Fun<erl_eval.5.123085357>
+91> lists:foreach(Print_City, [{moscow, {c, -10}}, {cape_town, {f, 70}},
+{stockholm, {c, -4}}, {paris, {f, 28}}, {london, {f, 36}}]).
+moscow          c -10
+cape_town       f 70
+stockholm       c -4
+paris           f 28
+london          f 36
+ok
+```  
+
+下面，让我们定义一个函数，这个函数用于遍历城市温度列表并将每个温度值都转换为摄氏温度表示。如下所示：  
+
+```
+-module(tut13).
+
+-export([convert_list_to_c/1]).
+
+convert_to_c({Name, {f, Temp}}) ->
+    {Name, {c, trunc((Temp - 32) * 5 / 9)}};
+convert_to_c({Name, {c, Temp}}) ->
+    {Name, {c, Temp}}.
+
+convert_list_to_c(List) ->
+    lists:map(fun convert_to_c/1, List).
+```  
+
+```
+92> tut13:convert_list_to_c([{moscow, {c, -10}}, {cape_town, {f, 70}},
+{stockholm, {c, -4}}, {paris, {f, 28}}, {london, {f, 36}}]).
+[{moscow,{c,-10}},
+ {cape_town,{c,21}},
+ {stockholm,{c,-4}},
+ {paris,{c,-2}},
+ {london,{c,2}}]
+```  
+
+convert\_to\_c 函数和之前的一样，但是它现在被用作高阶函数：  
+
+```
+lists:map(fun convert_to_c/1, List)
+```  
+
+当一个在别处定义的函数被用作高阶函数时，我们可以通过 Function/Arity 的方式来引用它 (注意，Function 为函数名，Arity 为函数的参数个数)。所以在调用 map 函数时，才会是 lists:map(fun convert\_to\_c/1, List) 这样的形式。如上所示，convert\_list\_to\_c  变得更加的简洁易懂了。  
+
+lists 标准库中还包括排序函数 sort(Fun,List)，其中 Fun 接受两个输入参数，如果第一个元素比第二个元素小则函数返回真，否则返回假。把排序添加到 convert\_list\_to\_c 中：  
+
+```
+-module(tut13).
+
+-export([convert_list_to_c/1]).
+
+convert_to_c({Name, {f, Temp}}) ->
+    {Name, {c, trunc((Temp - 32) * 5 / 9)}};
+convert_to_c({Name, {c, Temp}}) ->
+    {Name, {c, Temp}}.
+
+convert_list_to_c(List) ->
+    New_list = lists:map(fun convert_to_c/1, List),
+    lists:sort(fun({_, {c, Temp1}}, {_, {c, Temp2}}) ->
+                       Temp1 < Temp2 end, New_list).
+```  
+
+```
+93> c(tut13).
+{ok,tut13}
+94> tut13:convert_list_to_c([{moscow, {c, -10}}, {cape_town, {f, 70}},
+{stockholm, {c, -4}}, {paris, {f, 28}}, {london, {f, 36}}]).
+[{moscow,{c,-10}},
+ {stockholm,{c,-4}},
+ {paris,{c,-2}},
+ {london,{c,2}},
+ {cape_town,{c,21}}]
+```  
+
+在 sort 中用到了下面这个函数：  
+
+```
+fun({_, {c, Temp1}}, {_, {c, Temp2}}) -> Temp1 < Temp2 end,
+```  
+
+这儿用到了匿名变量 "_" 的概念。匿名变量常用于取得一个获得一个值但是又忽略它的场景。当然，它也可以用到其它的场景中，而不仅仅是在高阶函数这儿。Temp1 <  Temp2 说明如果 Temp1 比 Temp2 小，则返回 true。
