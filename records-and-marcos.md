@@ -1,6 +1,6 @@
-# 5 记录与宏  
+# 5 记录 (Records) 与宏  (Macros)  
 
-一个大规模程序经常有很多个文件组成，这些不同部分这间通过良好定义的接口相互联系。  
+一个大规模程序经常有很多个文件组成，这些不同部分之间通过良好定义的接口相互联系。  
 
 ## 5.1 将大程序分在多个文件中  
 
@@ -8,7 +8,7 @@
 
 - mess\_config.hrl  
 
-     配置鼠数据头文件
+     配置所需数据头文件
      
 - mess\_interface.hrl  
 
@@ -20,7 +20,7 @@
     
 - mess\_client.erl
 
-    messager 系统客户端部分的函数
+    messager 系统客户端的函数
     
 - mess\_server.erl
 
@@ -39,7 +39,7 @@
 ```
 %%%----FILE mess_interface.hrl----
 
-%%% Message interface between client and server and client shell for
+%%%Message interface between client and server and client shell for
 %%% messenger program 
 
 %%%Messages from Client to server received in server/1 function.
@@ -260,7 +260,7 @@ server_transfer(From, Name, To, Message, User_List) ->
 {message_to, fred, "hello"}
 ```  
 
-注意，使用这种方式创建记录时，你不得不仔细考虑给每个部分赋值时的顺序问题。但是，这样做的优势在于你可以把接口一并定义在头文件中，这样修改接口会变得非常容易。例如，如果你想在记录中添加一个新的域，你只需要在使用该新域的地方进行修改就可以了，而不需要在每个使用记录的都进行修改。如果你在创建记录时漏掉了其中的某些域，则这些域会得到一个默认的原子值 undefined。  
+注意，使用这种方式创建记录时，你不需要考虑给每个部分赋值时的顺序问题。这样做的另外一个优势在于你可以把接口一并定义在头文件中，这样修改接口会变得非常容易。例如，如果你想在记录中添加一个新的域，你只需要在使用该新域的地方进行修改就可以了，而不需要在每个使用记录的地方都进行修改。如果你在创建记录时漏掉了其中的某些域，则这些域会得到一个默认的原子值 undefined。  
 
 使用记录进行模式匹配与创建记录是一样。例如，在 receive 的 case 中：  
 
@@ -276,7 +276,7 @@ server_transfer(From, Name, To, Message, User_List) ->
 
 ## 5.4 宏  
 
-在 messager 系统添加到另外一种东西是宏。在 mess\_config.hrl 文件中包含如下的定义：  
+在 messager 系统添加的另外一种东西是宏。在 mess\_config.hrl 文件中包含如下的定义：  
 
 ```
 %%% Configure the location of the server node,
@@ -295,9 +295,10 @@ server_transfer(From, Name, To, Message, User_List) ->
 
 ```
 spawn(?MODULE, server, [])
-```
-这是一个标准宏（也就是说，这是一个系统定义的宏而不是用户自定义的宏）。?MODULE  宏总是被替换为当前模块名（也就是在文件开始的部分的 -module 定义）。宏有许多的高级用法，作为参数只是其中之一。  
+```  
 
-Messager 系统中的三个 Erlang（.erl）文件被分布编译成三个独立的目标代码文件（.beam）中。当执行过程中引用到这些代码时，Erlang 系统会将它们加载并链接到系统中。在本例中，我们把它们全部放到当前工作目录下（即你执行 "cd" 命令后所在的目录）。我们也可以将这些文件 .beam 放到其它目录下。  
+这是一个标准宏（也就是说，这是一个系统定义的宏而不是用户自定义的宏）。?MODULE  宏总是被替换为当前模块名（也就是在文件开始的部分的 -module 定义的名称）。宏有许多的高级用法，作为参数只是其中之一。  
+
+Messager 系统中的三个 Erlang（.erl）文件被分布编译成三个独立的目标代码文件（.beam）中。当执行过程中引用到这些代码时，Erlang 系统会将它们加载并链接到系统中。在本例中，我们把它们全部放到当前工作目录下（即你执行 "cd" 命令后所在的目录）。我们也可以将这些文件放到其它目录下。  
 
 在这个 messager 例子中，我们没有对发送消息的内容做出任何假设和限制。这些消息可以是任何合法的 Erlang 项。
